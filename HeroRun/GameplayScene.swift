@@ -19,7 +19,6 @@ class GameplayScene: SKScene, SKPhysicsContactDelegate {
     var background: SKNode!
     let background_speed = 250.0
     var backgroundMusicPlayer = AVAudioPlayer()
-
     
     // Mage
     var mage: SKSpriteNode!
@@ -75,7 +74,6 @@ class GameplayScene: SKScene, SKPhysicsContactDelegate {
     var delta = NSTimeInterval(0)
     var last_update_time = NSTimeInterval(0)
     
-    
     // Floor
     let floor_distance: CGFloat = 150
     var leftWall: SKSpriteNode!
@@ -100,130 +98,51 @@ class GameplayScene: SKScene, SKPhysicsContactDelegate {
         
         initSprites()
         initHUD()
-        drawMana()
+        initMana()
         regenMana()
         initWorld()
         initBackground()
         initMage()
-    
-       
-        
-        playBackgroundMusic("level1.mp3")
-        
-        //initDemon()
-        //spawnBoss()
-        //initSkeleton()
         
         spawnSkeleton()
         spawnSkeleton2()
         spawnBat()
         spawnDemon()
         
-    }
-    
-    func playBackgroundMusic(filename: String) {
-        let url = NSBundle.mainBundle().URLForResource(filename, withExtension: nil)
-        guard let newURL = url else {
-            print("Could not find file: \(filename)")
-            return
-        }
-        do {
-            backgroundMusicPlayer = try AVAudioPlayer(contentsOfURL: newURL)
-            backgroundMusicPlayer.numberOfLoops = -1
-            backgroundMusicPlayer.prepareToPlay()
-            backgroundMusicPlayer.play()
-        } catch let error as NSError {
-            print(error.description)
-        }
-    }
-    
-
-    
-    func spawnBoss() {
-        self.removeActionForKey("spawnSkeleton1")
-        self.removeActionForKey("spawnSkeleton2")
-        self.removeActionForKey("spawnBat")
-        self.removeActionForKey("spawnDemon")
+        //initSkeleton()
+        //initBat()
+        //initDemon()
+        //initBoss()
         
-        let wait = SKAction.waitForDuration(5)
-        let spawn = SKAction.runBlock { self.initBoss() }
-        
-        let sequence = SKAction.sequence([wait, spawn])
-        self.runAction(sequence)
+        playBackgroundMusic("level1.mp3")
     }
     
-    func initBoss() {
-
-        boss = SKSpriteNode(texture: bossAtlas.textureNamed("Boss"))
-        boss.size = CGSize(width: 250, height: 100)
-        boss.position = CGPoint(x: frame.width - 150, y: frame.height - 400)
-        boss.zPosition = 5
-        
-        bossHP = 8
-        
-        boss.physicsBody = SKPhysicsBody(rectangleOfSize: CGSize(width: 100, height: 100))
-        boss.physicsBody?.categoryBitMask = bossCategory
-        boss.physicsBody?.contactTestBitMask = fireballCategory | playButtonCategory | boundaryCategory
-        boss.physicsBody?.allowsRotation = false
-        boss.physicsBody?.restitution = 0
-        boss.physicsBody?.affectedByGravity = false
-        
-        bossMoveDown()
-        
-        bossAttack()
-
-        addChild(boss)
-    }
-    
-    func bossMoveDown() {
-        let action = SKAction.moveToY(0, duration: 2)
-        boss.runAction(action)
-    }
-    
-    func bossMoveUp() {
-        let action = SKAction.moveToY(frame.height, duration: 2)
-        boss.runAction(action)
-    }
-
-    
-    func bossAttack() {
-        let wait = SKAction.waitForDuration(2, withRange: 1)
-        let spawn = SKAction.runBlock { self.initBFireball() }
-        let sequence = SKAction.sequence([wait, spawn])
-        self.runAction(SKAction.repeatActionForever(sequence))
-        
-    }
-
-    func BossAtkAnimation() {
-        let animatedBoss = SKAction.animateWithTextures(bossAttackSprites, timePerFrame: 0.2)
-        let action = SKAction.repeatAction(animatedBoss, count: 1)
-        boss.runAction(action)
-    }
-    
+    // touch screen
     override func touchesBegan(touches: Set<UITouch>, withEvent event: UIEvent?) {
-
         for touch: AnyObject in touches {
-                
             let location = touch.locationInNode(self)
             
+            // Resume the scene
             if playButton.containsPoint(location) {
                 self.scene!.view!.paused = false
                 backgroundMusicPlayer.play()
             }
-                
+            
+            // Pausing the scene
             if pauseButton.containsPoint(location) {
                 self.scene!.view!.paused = true
                 backgroundMusicPlayer.stop()
             }
             
+             // left side of the screen
             if location.x < self.frame.size.width / 2 &&
             location.y < self.frame.size.height - 200{
-                // left side of the screen
-                jump()
+                mageJump()
             }
+            
+            // right side of the screen
             if location.x > self.frame.size.width / 2 &&
             location.y < self.frame.size.height - 200{
-                // right side of the screen
                 if mana > 0 {
                     mana = mana - 1
                     fireballAtk()
@@ -232,17 +151,16 @@ class GameplayScene: SKScene, SKPhysicsContactDelegate {
                     print("NO MANA")
                 }
             }
-
         }
-        
     }
     
+    // Update
     override func update(currentTime: CFTimeInterval) {
         delta = (last_update_time == 0.0) ? 0.0 : currentTime - last_update_time
         last_update_time = currentTime
         
         manaLabel.removeFromParent()
-        drawMana()
+        initMana()
         
         moveBackground()
         
@@ -257,36 +175,8 @@ class GameplayScene: SKScene, SKPhysicsContactDelegate {
     }
     
     
-    func initBFireball() {
-        let bFireball = SKSpriteNode()
-        bFireball.size = CGSize(width: 50, height: 50)
-        bFireball.position = CGPoint(x: boss.position.x - 100, y: boss.position.y)
-        bFireball.zPosition = 6
-        
-        bFireball.physicsBody = SKPhysicsBody(circleOfRadius: 20)
-        bFireball.physicsBody?.categoryBitMask = bFireballCategory
-        bFireball.physicsBody?.contactTestBitMask = playerCategory | fireballCategory
-        bFireball.physicsBody?.collisionBitMask = boundaryCategory
-        bFireball.physicsBody?.affectedByGravity = false
-        bFireball.physicsBody?.allowsRotation = false
-        bFireball.physicsBody?.restitution = 0.0
-        bFireball.physicsBody?.usesPreciseCollisionDetection = true
-        
-        let action = SKAction.moveTo(CGPoint(x: mage.position.x - 50, y: mage.position.y) , duration: 2)
-        let action2 = SKAction.moveToX(0, duration: 1)
-        let actionDone = SKAction.removeFromParent()
-        bFireball.runAction(SKAction.sequence([action, action2, actionDone]))
-        
-        let animatedBFireball = SKAction.animateWithTextures(bFireballSprite, timePerFrame: 0.1)
-        let repeatAction  = SKAction.repeatActionForever(animatedBFireball)
-        bFireball.runAction(repeatAction)
-        
-        addChild(bFireball)
-        
-        BossAtkAnimation()
-
-    }
     
+    // GAME CONDITIONS /////////////////////
     func gameOver() {
         backgroundMusicPlayer.stop()
         let transition = SKTransition.crossFadeWithDuration(1.0)
@@ -305,63 +195,94 @@ class GameplayScene: SKScene, SKPhysicsContactDelegate {
         scene?.view?.presentScene(nextScene, transition: transition)
     }
     
-    func initHUD() {
-        
-        pauseButton = SKSpriteNode(imageNamed: "PauseButton")
-        pauseButton.size = CGSize(width: 80, height: 80)
-        pauseButton.position = CGPoint(x: frame.width - 100 , y: frame.height - 150)
-        pauseButton.zPosition = 10
-        
-        addChild(pauseButton)
-        
-        playButton = SKSpriteNode(imageNamed: "PlayButton")
-        playButton.size = CGSize(width: 80, height: 80)
-        playButton.position = CGPoint(x: frame.width - 200 , y: frame.height - 150)
-        playButton.zPosition = 10
-
-        addChild(playButton)
-        
-        playButton.physicsBody = SKPhysicsBody(rectangleOfSize: CGSize(width: 100, height: 300))
-        playButton.physicsBody?.categoryBitMask = playButtonCategory
-        playButton.physicsBody?.contactTestBitMask = bossCategory
-        playButton.physicsBody?.affectedByGravity = false
-        playButton.physicsBody?.allowsRotation = false
-        playButton.physicsBody?.restitution = 0.0
-        
-        manaHUD = SKSpriteNode(imageNamed: "manaHUD")
-        manaHUD.size = CGSize(width: 240, height: 80)
-        manaHUD.position = CGPoint(x: 120, y: frame.height - 150)
-        manaHUD.zPosition = 10
-        
-        addChild(manaHUD)
-        
-    }
     
-    func drawMana() {
-        
-        manaLabel = SKLabelNode(fontNamed:"Chalkduster")
-        manaLabel.text = "\(mana)/5"
-        manaLabel.fontSize = 50
-        manaLabel.position = CGPoint(x: 140, y: frame.height - 165)
-        manaLabel.zPosition = 11
-        self.addChild(manaLabel)
-        
-    }
     
-    func regenMana() {
-        let wait = SKAction.waitForDuration(1.3)
-        let increaseMana = SKAction.runBlock { self.increaseMana() }
-        
-        let sequence = SKAction.sequence([wait, increaseMana])
-        self.runAction(SKAction.repeatActionForever(sequence))
-    }
-    
-    func increaseMana() {
-        if(mana < 5) {
-            mana = mana + 1
+    // Background music ///////////////////////
+    func playBackgroundMusic(filename: String) {
+        let url = NSBundle.mainBundle().URLForResource(filename, withExtension: nil)
+        guard let newURL = url else {
+            print("Could not find file: \(filename)")
+            return
+        }
+        do {
+            backgroundMusicPlayer = try AVAudioPlayer(contentsOfURL: newURL)
+            backgroundMusicPlayer.numberOfLoops = -1
+            backgroundMusicPlayer.prepareToPlay()
+            backgroundMusicPlayer.play()
+        } catch let error as NSError {
+            print(error.description)
         }
     }
+
     
+    
+    // INITIALIZE ALL SPRITES //////////////////
+    func initSprites() {
+        mageRunSprites.append(mageAtlas.textureNamed("Mage1"))
+        mageRunSprites.append(mageAtlas.textureNamed("Mage2"))
+        mageRunSprites.append(mageAtlas.textureNamed("Mage3"))
+        mageRunSprites.append(mageAtlas.textureNamed("Mage4"))
+        mageRunSprites.append(mageAtlas.textureNamed("Mage5"))
+        mageRunSprites.append(mageAtlas.textureNamed("Mage6"))
+        
+        mageAttackSprites.append(mageAtlas.textureNamed("MageDeath"))
+        mageAttackSprites.append(mageAtlas.textureNamed("MageAttack"))
+        
+        mageJumpingSprites.append(mageAtlas.textureNamed("Mage6"))
+        mageJumpingSprites.append(mageAtlas.textureNamed("Mage4"))
+        
+        fireballSprite.append(fireballAtlas.textureNamed("Fireball1"))
+        fireballSprite.append(fireballAtlas.textureNamed("Fireball2"))
+        fireballSprite.append(fireballAtlas.textureNamed("Fireball3"))
+        fireballSprite.append(fireballAtlas.textureNamed("Fireball4"))
+        
+        fireballParticalsSprite.append(fireballAtlas.textureNamed("FireballParticals1"))
+        fireballParticalsSprite.append(fireballAtlas.textureNamed("FireballParticals2"))
+        fireballParticalsSprite.append(fireballAtlas.textureNamed("FireballParticals3"))
+        
+        bossAttackSprites.append(bossAtlas.textureNamed("BossAttack"))
+        bossAttackSprites.append(bossAtlas.textureNamed("Boss"))
+        
+        bFireballSprite.append(bFireballAtlas.textureNamed("Fireball1"))
+        bFireballSprite.append(bFireballAtlas.textureNamed("Fireball2"))
+        bFireballSprite.append(bFireballAtlas.textureNamed("Fireball3"))
+        bFireballSprite.append(bFireballAtlas.textureNamed("Fireball4"))
+        
+        skeletonSprite.append(skeletonAtlas.textureNamed("Skeleton1"))
+        skeletonSprite.append(skeletonAtlas.textureNamed("Skeleton2"))
+        skeletonSprite.append(skeletonAtlas.textureNamed("Skeleton3"))
+        skeletonSprite.append(skeletonAtlas.textureNamed("Skeleton4"))
+        skeletonSprite.append(skeletonAtlas.textureNamed("Skeleton5"))
+        skeletonSprite.append(skeletonAtlas.textureNamed("Skeleton6"))
+        
+        batSprite.append(batAtlas.textureNamed("Bat1"))
+        batSprite.append(batAtlas.textureNamed("Bat2"))
+        batSprite.append(batAtlas.textureNamed("Bat3"))
+        
+        deathSprite.append(deathAtlas.textureNamed("Death1"))
+        deathSprite.append(deathAtlas.textureNamed("Death2"))
+        deathSprite.append(deathAtlas.textureNamed("Death3"))
+        deathSprite.append(deathAtlas.textureNamed("Death4"))
+        deathSprite.append(deathAtlas.textureNamed("Death5"))
+        
+        demonLeftSprite.append(demonAtlas.textureNamed("DemonL1"))
+        demonLeftSprite.append(demonAtlas.textureNamed("DemonL2"))
+        demonLeftSprite.append(demonAtlas.textureNamed("DemonL3"))
+        demonLeftSprite.append(demonAtlas.textureNamed("DemonL4"))
+        demonLeftSprite.append(demonAtlas.textureNamed("DemonL5"))
+        demonLeftSprite.append(demonAtlas.textureNamed("DemonL6"))
+        
+        demonRightSprite.append(demonAtlas.textureNamed("DemonR1"))
+        demonRightSprite.append(demonAtlas.textureNamed("DemonR2"))
+        demonRightSprite.append(demonAtlas.textureNamed("DemonR3"))
+        demonRightSprite.append(demonAtlas.textureNamed("DemonR4"))
+        demonRightSprite.append(demonAtlas.textureNamed("DemonR5"))
+        demonRightSprite.append(demonAtlas.textureNamed("DemonR6"))
+    }
+    
+    
+    
+    // WORLD ///////////////////////////
     func initWorld() {
         physicsWorld.contactDelegate = self
         
@@ -394,10 +315,12 @@ class GameplayScene: SKScene, SKPhysicsContactDelegate {
         leftWall.physicsBody?.restitution = 0.0
         
         addChild(leftWall)
-        
     }
     
     
+    
+    
+    // BACKGROUND ////////////////////////
     func initBackground() {
         background = SKNode()
         
@@ -415,7 +338,6 @@ class GameplayScene: SKScene, SKPhysicsContactDelegate {
             tile.zPosition = 1
             background.addChild(tile)
         }
-        
     }
     
     func moveBackground() {
@@ -429,11 +351,72 @@ class GameplayScene: SKScene, SKPhysicsContactDelegate {
             if background_screen_position.x <= -node.frame.size.width {
                 node.position = CGPoint(x: node.position.x + (node.frame.size.width * 3), y: node.position.y)
             }
-            
         }
+    }
+
+    
+    
+    
+    // HUD /////////////////////////////////
+    func initHUD() {
+        // Pause Button
+        pauseButton = SKSpriteNode(imageNamed: "PauseButton")
+        pauseButton.size = CGSize(width: 80, height: 80)
+        pauseButton.position = CGPoint(x: frame.width - 100 , y: frame.height - 150)
+        pauseButton.zPosition = 10
         
+        addChild(pauseButton)
+        
+        // Resume Button
+        playButton = SKSpriteNode(imageNamed: "PlayButton")
+        playButton.size = CGSize(width: 80, height: 80)
+        playButton.position = CGPoint(x: frame.width - 200 , y: frame.height - 150)
+        playButton.zPosition = 10
+
+        addChild(playButton)
+        
+        playButton.physicsBody = SKPhysicsBody(rectangleOfSize: CGSize(width: 100, height: 300))
+        playButton.physicsBody?.categoryBitMask = playButtonCategory
+        playButton.physicsBody?.contactTestBitMask = bossCategory
+        playButton.physicsBody?.affectedByGravity = false
+        playButton.physicsBody?.allowsRotation = false
+        playButton.physicsBody?.restitution = 0.0
+        
+        // mana HUD
+        manaHUD = SKSpriteNode(imageNamed: "manaHUD")
+        manaHUD.size = CGSize(width: 240, height: 80)
+        manaHUD.position = CGPoint(x: 120, y: frame.height - 150)
+        manaHUD.zPosition = 10
+        
+        addChild(manaHUD)
     }
     
+    func initMana() {
+        manaLabel = SKLabelNode(fontNamed:"Chalkduster")
+        manaLabel.text = "\(mana)/5"
+        manaLabel.fontSize = 50
+        manaLabel.position = CGPoint(x: 140, y: frame.height - 165)
+        manaLabel.zPosition = 11
+        self.addChild(manaLabel)
+    }
+
+    func regenMana() {
+        let wait = SKAction.waitForDuration(1.3)
+        let increaseMana = SKAction.runBlock { self.increaseMana() }
+        
+        let sequence = SKAction.sequence([wait, increaseMana])
+        self.runAction(SKAction.repeatActionForever(sequence))
+    }
+    
+    func increaseMana() {
+        if(mana < 5) {
+            mana = mana + 1
+        }
+    }
+
+    
+    
+    // HERO //////////////////////////////
     func initMage() {
         mage = SKSpriteNode()
         mage.size = CGSize(width: 75, height: 75)
@@ -449,28 +432,49 @@ class GameplayScene: SKScene, SKPhysicsContactDelegate {
         mage.physicsBody?.allowsRotation = false
         mage.physicsBody?.restitution = 0.0
         
-        MageRunAnimation()
+        mageRunAnimation()
         addChild(mage)
-        
     }
-    func MageRunAnimation() {
+    
+    func mageRunAnimation() {
         let animatedMage = SKAction.animateWithTextures(mageRunSprites, timePerFrame: 0.1)
         let action = SKAction.repeatActionForever(animatedMage)
         mage.runAction(action)
     }
     
-    func MageAtkAnimation() {
+    func mageAtkAnimation() {
         let animatedMage = SKAction.animateWithTextures(mageAttackSprites, timePerFrame: 0.15)
         let action = SKAction.repeatAction(animatedMage, count: 1)
         mage.runAction(action)
     }
     
-    func MageJumpAnimation() {
+    func mageJumpAnimation() {
         let animatedMage = SKAction.animateWithTextures(mageJumpingSprites, timePerFrame: 0.63)
         let action = SKAction.repeatAction(animatedMage, count: 1)
         mage.runAction(action)
     }
     
+    func mageJump() {
+        
+        // check to see if mage y position is <= floor_distance
+        // added 10 because some decimals were cut off
+        if (mage.position.y - mage.size.height / 2 <= floor_distance + 10) {
+            isJumping = false
+        }
+        
+        if(isJumping == true) {
+        }
+        else {
+            mageJumpAnimation()
+            mage.physicsBody?.applyImpulse(CGVectorMake(0, 150))
+            isJumping = true
+            runAction(SKAction.playSoundFileNamed("playerjump.mp3", waitForCompletion: true))
+        }
+    }
+
+    
+    
+    // HERO FIREBALL ////////////////////////
     func fireballAtk() {
         
         let fireball = SKSpriteNode()
@@ -493,36 +497,27 @@ class GameplayScene: SKScene, SKPhysicsContactDelegate {
         let actionDone = SKAction.removeFromParent()
         fireball.runAction(SKAction.sequence([action, actionDone]))
         
-        
         let animatedFireball = SKAction.animateWithTextures(fireballSprite, timePerFrame: 0.1)
         let repeatAction  = SKAction.repeatActionForever(animatedFireball)
         fireball.runAction(repeatAction)
         
         addChild(fireball)
         
-        MageAtkAnimation()
-        
+        mageAtkAnimation()
     }
     
-    func jump() {
-        
-        // check to see if mage y position is <= floor_distance
-        // added 10 because some decimals were cut off
-        if (mage.position.y - mage.size.height / 2 <= floor_distance + 10) {
-            isJumping = false
-            
-        }
-        
-        if(isJumping == true) {
-        }
-        else {
-            MageJumpAnimation()
-            mage.physicsBody?.applyImpulse(CGVectorMake(0, 150))
-            isJumping = true
-             runAction(SKAction.playSoundFileNamed("playerjump.mp3", waitForCompletion: true))
-        }
+    func fireballParticalsAnimation(fireball: SKSpriteNode) {
+        fireball.physicsBody = SKPhysicsBody(rectangleOfSize: CGSize(width: 0, height: 0))
+        fireball.removeAllActions()
+        let action = SKAction.animateWithTextures(fireballParticalsSprite, timePerFrame: 0.1)
+        let actionDone = SKAction.removeFromParent()
+        fireball.runAction(SKAction.sequence([action, actionDone]))
     }
+
     
+    
+    
+    // SKELETON ////////////////////////
     func initSkeleton() {
         let skeleton = SKSpriteNode()
         skeleton.size = CGSize(width: 75, height:75)
@@ -544,12 +539,9 @@ class GameplayScene: SKScene, SKPhysicsContactDelegate {
         skeleton.runAction(repeatAction)
         
         addChild(skeleton)
-        
-        
     }
     
     func spawnSkeleton() {
-        
         let wait = SKAction.waitForDuration(2, withRange: 1)
         let spawn = SKAction.runBlock { self.initSkeleton() }
         
@@ -565,6 +557,9 @@ class GameplayScene: SKScene, SKPhysicsContactDelegate {
         self.runAction(SKAction.repeatActionForever(sequence), withKey: "spawnSkeleton2")
     }
     
+    
+    
+    // BAT ////////////////////////////
     func initBat() {
         let bat = SKSpriteNode()
         bat.size = CGSize(width: 50, height: 50)
@@ -593,7 +588,6 @@ class GameplayScene: SKScene, SKPhysicsContactDelegate {
     }
     
     func spawnBat() {
-        
         let wait = SKAction.waitForDuration(6, withRange: 2)
         let spawn = SKAction.runBlock { self.initBat() }
         
@@ -601,6 +595,9 @@ class GameplayScene: SKScene, SKPhysicsContactDelegate {
         self.runAction(SKAction.repeatActionForever(sequence), withKey: "spawnBat")
     }
     
+    
+    
+    // DEMON ///////////////////////////
     func initDemon() {
         let demon = SKSpriteNode()
         demon.size = CGSize(width: 75, height: 75)
@@ -625,8 +622,6 @@ class GameplayScene: SKScene, SKPhysicsContactDelegate {
         demon.runAction(repeatAction)
         
         addChild(demon)
-        
-        
     }
     
     func demonMoveRight(demon: SKSpriteNode) {
@@ -640,11 +635,9 @@ class GameplayScene: SKScene, SKPhysicsContactDelegate {
         
         demon.runAction(repeatAnimateAction)
         demon.runAction(moveAction)
-        
     }
     
     func spawnDemon() {
-        
         let wait = SKAction.waitForDuration(12)
         let spawn = SKAction.runBlock { self.initDemon() }
         
@@ -652,94 +645,114 @@ class GameplayScene: SKScene, SKPhysicsContactDelegate {
         self.runAction(SKAction.repeatActionForever(sequence), withKey: "spawnDemon")
     }
     
-    func initSprites() {
-        mageRunSprites.append(mageAtlas.textureNamed("Mage1"))
-        mageRunSprites.append(mageAtlas.textureNamed("Mage2"))
-        mageRunSprites.append(mageAtlas.textureNamed("Mage3"))
-        mageRunSprites.append(mageAtlas.textureNamed("Mage4"))
-        mageRunSprites.append(mageAtlas.textureNamed("Mage5"))
-        mageRunSprites.append(mageAtlas.textureNamed("Mage6"))
+    
+    
+    // BOSS //////////////////////////////////////
+    func initBoss() {
+        boss = SKSpriteNode(texture: bossAtlas.textureNamed("Boss"))
+        boss.size = CGSize(width: 250, height: 100)
+        boss.position = CGPoint(x: frame.width - 150, y: frame.height - 400)
+        boss.zPosition = 5
         
-        mageAttackSprites.append(mageAtlas.textureNamed("MageDeath"))
-        mageAttackSprites.append(mageAtlas.textureNamed("MageAttack"))
+        bossHP = 8
         
-        mageJumpingSprites.append(mageAtlas.textureNamed("Mage6"))
-        mageJumpingSprites.append(mageAtlas.textureNamed("Mage4"))
+        boss.physicsBody = SKPhysicsBody(rectangleOfSize: CGSize(width: 100, height: 100))
+        boss.physicsBody?.categoryBitMask = bossCategory
+        boss.physicsBody?.contactTestBitMask = fireballCategory | playButtonCategory | boundaryCategory
+        boss.physicsBody?.allowsRotation = false
+        boss.physicsBody?.restitution = 0
+        boss.physicsBody?.affectedByGravity = false
         
-        fireballSprite.append(fireballAtlas.textureNamed("Fireball1"))
-        fireballSprite.append(fireballAtlas.textureNamed("Fireball2"))
-        fireballSprite.append(fireballAtlas.textureNamed("Fireball3"))
-        fireballSprite.append(fireballAtlas.textureNamed("Fireball4"))
+        bossMoveDown()
+        bossAttack()
         
-        fireballParticalsSprite.append(fireballAtlas.textureNamed("FireballParticals1"))
-        fireballParticalsSprite.append(fireballAtlas.textureNamed("FireballParticals2"))
-        fireballParticalsSprite.append(fireballAtlas.textureNamed("FireballParticals3"))
-        
-        
-        bossAttackSprites.append(bossAtlas.textureNamed("BossAttack"))
-        bossAttackSprites.append(bossAtlas.textureNamed("Boss"))
-        
-        bFireballSprite.append(bFireballAtlas.textureNamed("Fireball1"))
-        bFireballSprite.append(bFireballAtlas.textureNamed("Fireball2"))
-        bFireballSprite.append(bFireballAtlas.textureNamed("Fireball3"))
-        bFireballSprite.append(bFireballAtlas.textureNamed("Fireball4"))
-        
-        skeletonSprite.append(skeletonAtlas.textureNamed("Skeleton1"))
-        skeletonSprite.append(skeletonAtlas.textureNamed("Skeleton2"))
-        skeletonSprite.append(skeletonAtlas.textureNamed("Skeleton3"))
-        skeletonSprite.append(skeletonAtlas.textureNamed("Skeleton4"))
-        skeletonSprite.append(skeletonAtlas.textureNamed("Skeleton5"))
-        skeletonSprite.append(skeletonAtlas.textureNamed("Skeleton6"))
-        
-        batSprite.append(batAtlas.textureNamed("Bat1"))
-        batSprite.append(batAtlas.textureNamed("Bat2"))
-        batSprite.append(batAtlas.textureNamed("Bat3"))
-        
-        
-        deathSprite.append(deathAtlas.textureNamed("Death1"))
-        deathSprite.append(deathAtlas.textureNamed("Death2"))
-        deathSprite.append(deathAtlas.textureNamed("Death3"))
-        deathSprite.append(deathAtlas.textureNamed("Death4"))
-        deathSprite.append(deathAtlas.textureNamed("Death5"))
-        
-        demonLeftSprite.append(demonAtlas.textureNamed("DemonL1"))
-        demonLeftSprite.append(demonAtlas.textureNamed("DemonL2"))
-        demonLeftSprite.append(demonAtlas.textureNamed("DemonL3"))
-        demonLeftSprite.append(demonAtlas.textureNamed("DemonL4"))
-        demonLeftSprite.append(demonAtlas.textureNamed("DemonL5"))
-        demonLeftSprite.append(demonAtlas.textureNamed("DemonL6"))
-        
-        demonRightSprite.append(demonAtlas.textureNamed("DemonR1"))
-        demonRightSprite.append(demonAtlas.textureNamed("DemonR2"))
-        demonRightSprite.append(demonAtlas.textureNamed("DemonR3"))
-        demonRightSprite.append(demonAtlas.textureNamed("DemonR4"))
-        demonRightSprite.append(demonAtlas.textureNamed("DemonR5"))
-        demonRightSprite.append(demonAtlas.textureNamed("DemonR6"))
-        
-        
+        addChild(boss)
     }
     
+    func bossMoveDown() {
+        let action = SKAction.moveToY(0, duration: 2)
+        boss.runAction(action)
+    }
+    
+    func bossMoveUp() {
+        let action = SKAction.moveToY(frame.height, duration: 2)
+        boss.runAction(action)
+    }
+    
+    func bossAttack() {
+        let wait = SKAction.waitForDuration(2, withRange: 1)
+        let spawn = SKAction.runBlock { self.initBFireball() }
+        let sequence = SKAction.sequence([wait, spawn])
+        self.runAction(SKAction.repeatActionForever(sequence))
+    }
+    
+    func BossAtkAnimation() {
+        let animatedBoss = SKAction.animateWithTextures(bossAttackSprites, timePerFrame: 0.2)
+        let action = SKAction.repeatAction(animatedBoss, count: 1)
+        boss.runAction(action)
+    }
+    
+    func spawnBoss() {
+        self.removeActionForKey("spawnSkeleton1")
+        self.removeActionForKey("spawnSkeleton2")
+        self.removeActionForKey("spawnBat")
+        self.removeActionForKey("spawnDemon")
+        
+        let wait = SKAction.waitForDuration(5)
+        let spawn = SKAction.runBlock { self.initBoss() }
+        
+        let sequence = SKAction.sequence([wait, spawn])
+        self.runAction(sequence)
+    }
+
+
+    
+    // BOSS Fireball ////////////////////////////
+    func initBFireball() {
+        let bFireball = SKSpriteNode()
+        bFireball.size = CGSize(width: 50, height: 50)
+        bFireball.position = CGPoint(x: boss.position.x - 100, y: boss.position.y)
+        bFireball.zPosition = 6
+        
+        bFireball.physicsBody = SKPhysicsBody(circleOfRadius: 20)
+        bFireball.physicsBody?.categoryBitMask = bFireballCategory
+        bFireball.physicsBody?.contactTestBitMask = playerCategory | fireballCategory
+        bFireball.physicsBody?.collisionBitMask = boundaryCategory
+        bFireball.physicsBody?.affectedByGravity = false
+        bFireball.physicsBody?.allowsRotation = false
+        bFireball.physicsBody?.restitution = 0.0
+        bFireball.physicsBody?.usesPreciseCollisionDetection = true
+        
+        let action = SKAction.moveTo(CGPoint(x: mage.position.x - 50, y: mage.position.y) , duration: 2)
+        let action2 = SKAction.moveToX(0, duration: 1)
+        let actionDone = SKAction.removeFromParent()
+        bFireball.runAction(SKAction.sequence([action, action2, actionDone]))
+        
+        let animatedBFireball = SKAction.animateWithTextures(bFireballSprite, timePerFrame: 0.1)
+        let repeatAction  = SKAction.repeatActionForever(animatedBFireball)
+        bFireball.runAction(repeatAction)
+        
+        addChild(bFireball)
+        
+        BossAtkAnimation()
+        
+    }
+ 
+
+    
+    // Death animation
     func deathAnimation(entity: SKSpriteNode) {
         entity.physicsBody = SKPhysicsBody(rectangleOfSize: CGSize(width: 0, height: 0))
         entity.removeAllActions()
         let action = SKAction.animateWithTextures(deathSprite, timePerFrame: 0.1)
         let actionDone = SKAction.removeFromParent()
         entity.runAction(SKAction.sequence([action, actionDone]))
-        
     }
     
-    func fireballParticalsAnimation(fireball: SKSpriteNode) {
-        fireball.physicsBody = SKPhysicsBody(rectangleOfSize: CGSize(width: 0, height: 0))
-        fireball.removeAllActions()
-        let action = SKAction.animateWithTextures(fireballParticalsSprite, timePerFrame: 0.1)
-        let actionDone = SKAction.removeFromParent()
-        fireball.runAction(SKAction.sequence([action, actionDone]))
-        
-        
-    }
     
+    
+    // COLLISION DETECTIONS ///////////////////////
     func didBeginContact(contact: SKPhysicsContact) {
-        
         let firstBody: SKPhysicsBody = contact.bodyA
         let secondBody: SKPhysicsBody = contact.bodyB
         
@@ -747,7 +760,6 @@ class GameplayScene: SKScene, SKPhysicsContactDelegate {
             print("NIL was found")
             return
         }
-        
         
         // Collision with fireball and enemy
         if ((firstBody.categoryBitMask == fireballCategory) &&
@@ -778,7 +790,6 @@ class GameplayScene: SKScene, SKPhysicsContactDelegate {
                 (secondBody.categoryBitMask == playerCategory)) {
             runAction(SKAction.playSoundFileNamed("playerhit.mp3", waitForCompletion: true))
             isGameOver = true
-            
         }
         
         // collision with demon leftwall
@@ -786,13 +797,11 @@ class GameplayScene: SKScene, SKPhysicsContactDelegate {
             (secondBody.categoryBitMask == demonCategory)) {
             
             demonMoveRight(secondBody.node as! SKSpriteNode)
-            
         }
         if ((firstBody.categoryBitMask == demonCategory) &&
             (secondBody.categoryBitMask == leftWallCategory)) {
             
             demonMoveRight(firstBody.node as! SKSpriteNode)
-            
         }
         
         // Collision with fireball and demon
@@ -800,34 +809,29 @@ class GameplayScene: SKScene, SKPhysicsContactDelegate {
             (secondBody.categoryBitMask == demonCategory)  &&
             (canHitDemon == true)) {
             
-            
             collisionFireballWithDemon(firstBody.node as! SKSpriteNode, demon: secondBody.node as! SKSpriteNode)
-
         }
         if ((firstBody.categoryBitMask == demonCategory) &&
             (secondBody.categoryBitMask == fireballCategory) &&
             (canHitDemon == true)) {
-            
-            collisionFireballWithDemon(secondBody.node as! SKSpriteNode, demon: firstBody.node as! SKSpriteNode)
 
+            collisionFireballWithDemon(secondBody.node as! SKSpriteNode, demon: firstBody.node as! SKSpriteNode)
         }
-        
         if ((firstBody.categoryBitMask == fireballCategory) &&
             (secondBody.categoryBitMask == demonCategory)  &&
             (canHitDemon == false)) {
-            runAction(SKAction.playSoundFileNamed("playerhit.mp3", waitForCompletion: true))
-
-            fireballParticalsAnimation(firstBody.node as! SKSpriteNode)
             
+            runAction(SKAction.playSoundFileNamed("playerhit.mp3", waitForCompletion: true))
+            fireballParticalsAnimation(firstBody.node as! SKSpriteNode)
         }
         if ((firstBody.categoryBitMask == demonCategory) &&
             (secondBody.categoryBitMask == fireballCategory) &&
             (canHitDemon == false)) {
+            
             runAction(SKAction.playSoundFileNamed("playerhit.mp3", waitForCompletion: true))
             fireballParticalsAnimation(secondBody.node as! SKSpriteNode)
             
         }
-        
         
         // collision with enemies with leftWall
         if ((firstBody.categoryBitMask == leftWallCategory) &&
@@ -847,23 +851,23 @@ class GameplayScene: SKScene, SKPhysicsContactDelegate {
             (secondBody.categoryBitMask == bossCategory)) {
             
             collisionFireballWithBoss(firstBody.node as! SKSpriteNode, enemy: secondBody.node as! SKSpriteNode)
-            
         }
         if ((firstBody.categoryBitMask == bossCategory) &&
             (secondBody.categoryBitMask == fireballCategory)) {
 
             collisionFireballWithBoss(secondBody.node as! SKSpriteNode, enemy: firstBody.node as! SKSpriteNode)
-
         }
         
         // collision with bFireball and mage
         if ((firstBody.categoryBitMask == bFireballCategory) &&
             (secondBody.categoryBitMask == playerCategory)) {
+            
             runAction(SKAction.playSoundFileNamed("playerhit.mp3", waitForCompletion: true))
             isGameOver = true
         }
         if ((firstBody.categoryBitMask == playerCategory) &&
             (secondBody.categoryBitMask == bFireballCategory)) {
+            
             runAction(SKAction.playSoundFileNamed("playerhit.mp3", waitForCompletion: true))
             isGameOver = true
         }
@@ -871,12 +875,14 @@ class GameplayScene: SKScene, SKPhysicsContactDelegate {
         // collision with bFireball and fireball
         if ((firstBody.categoryBitMask == bFireballCategory) &&
             (secondBody.categoryBitMask == fireballCategory)) {
+            
              runAction(SKAction.playSoundFileNamed("playerhit.mp3", waitForCompletion: true))
              fireballParticalsAnimation(secondBody.node as! SKSpriteNode)
 
         }
         if ((firstBody.categoryBitMask == fireballCategory) &&
             (secondBody.categoryBitMask == bFireballCategory)) {
+            
              runAction(SKAction.playSoundFileNamed("playerhit.mp3", waitForCompletion: true))
              fireballParticalsAnimation(firstBody.node as! SKSpriteNode)
 
@@ -906,7 +912,7 @@ class GameplayScene: SKScene, SKPhysicsContactDelegate {
         
     }
     
-    
+    // COLLISION FUNCTIONS //////////////
     func collisionFireballWithBoss(fireball: SKSpriteNode, enemy: SKSpriteNode) {
         runAction(SKAction.playSoundFileNamed("enemyhit.mp3", waitForCompletion: true))
         fireballParticalsAnimation(fireball)
@@ -917,7 +923,6 @@ class GameplayScene: SKScene, SKPhysicsContactDelegate {
         }
         
     }
-    
     
     func collisionLeftWallWithEnemy(leftWall: SKSpriteNode, enemy: SKSpriteNode) {
         enemy.removeFromParent()

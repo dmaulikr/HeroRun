@@ -10,14 +10,26 @@
 import SpriteKit
 
 class GameScene: SKScene {
+    
+    var myLabel: SKLabelNode!
+    var playButton: SKSpriteNode!
+    
     override func didMoveToView(view: SKView) {
+        
+        self.backgroundColor = UIColor.blackColor()
+        
         /* Setup your scene here */
-        let myLabel = SKLabelNode(fontNamed:"Chalkduster")
-        myLabel.text = "MAIN MENU"
-        myLabel.fontSize = 45
+        myLabel = SKLabelNode(fontNamed:"Chalkduster")
+        myLabel.text = "HERO RUN"
+        myLabel.fontSize = 75
         myLabel.position = CGPoint(x:CGRectGetMidX(self.frame), y:CGRectGetMidY(self.frame))
         
         self.addChild(myLabel)
+        
+       
+
+        
+        
     }
     
     override func touchesBegan(touches: Set<UITouch>, withEvent event: UIEvent?) {
@@ -29,6 +41,9 @@ class GameScene: SKScene {
         nextScene.scaleMode = .AspectFill
         
         scene?.view?.presentScene(nextScene, transition: transition)
+        
+        
+     
     }
     
     override func update(currentTime: CFTimeInterval) {

@@ -10,11 +10,11 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "HeroRun/GameplayScene.swift"
-            timestampString = "484257232.463581"
+            timestampString = "484291829.063495"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "963"
-            endingLineNumber = "963">
+            startingLineNumber = "968"
+            endingLineNumber = "968">
          </BreakpointContent>
       </BreakpointProxy>
    </Breakpoints>
